@@ -1,0 +1,10 @@
+FROM docker.io/alpine:latest
+
+RUN apk add --no-cache squid nftables socat tcpdump
+
+COPY squid.conf /etc/squid/squid.conf
+COPY --chmod=755 entrypoint.sh /usr/local/bin/gateway
+
+EXPOSE 3128
+
+ENTRYPOINT ["gateway"]

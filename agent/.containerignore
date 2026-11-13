@@ -1,0 +1,3 @@
+# Keep keys and session logs out of the build context.
+config/
+sessions/

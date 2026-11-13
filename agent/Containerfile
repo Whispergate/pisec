@@ -1,0 +1,29 @@
+FROM docker.io/fedora:latest
+
+# Update and install essentials
+RUN dnf update -y && \
+    dnf install -y nodejs npm git fd-find ripgrep && \
+    dnf clean all
+
+# Install pi harness (pinned: the extensions use its extension API)
+# Settings are read-only, so bump lastChangelogVersion in config/settings.json with it.
+ARG PI_VERSION=1.5.0
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION}
+
+# Extra tools from pisec.conf [packages] (passed by make pod-build)
+ARG PKGS=""
+RUN if [ -n "$PKGS" ]; then dnf install -y $PKGS && dnf clean all; fi
+
+# The workspace is agent-writable: never load AGENTS.md/CLAUDE.md from it (subcommands don't take the flag)
+RUN mv /usr/local/bin/pi /usr/local/bin/pi.real && \
+    printf '#!/bin/sh\ncase "$1" in auth|config|install|list|mcp|remove|uninstall|update) exec pi.real "$@" ;; esac\nexec pi.real --no-context-files "$@"\n' > /usr/local/bin/pi && \
+    chmod 755 /usr/local/bin/pi
+
+# pi dir (config files bind-mounted read-only from agent/config/; the rest is ephemeral)
+# + session logs + the agent's working dir
+RUN mkdir -p /root/.pi/agent /root/.pi/sessions /usr/local/shared
+ENV PI_CODING_AGENT_SESSION_DIR=/root/.pi/sessions
+
+WORKDIR /usr/local/shared
+
+CMD ["bash"]

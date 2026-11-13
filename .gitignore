@@ -1,0 +1,24 @@
+# Default-deny for agent/config/: only allowlisted files can be committed,
+# so secrets (providers.env) and anything pi might write here never reach git.
+agent/config/*
+!agent/config/settings.json
+!agent/config/providers.env
+!agent/config/SYSTEM.md
+!agent/config/models.json
+!agent/config/extensions/
+!agent/config/skills/
+!agent/config/themes/
+
+# pi session logs (prompts, tool calls, output)
+agent/sessions/
+
+# Audit logs written by the gateway: keep the dir, ignore its contents
+logs/*
+!logs/.gitkeep
+
+# Shared dropbox: keep the dir, ignore its contents
+shared/*
+!shared/.gitkeep
+
+# Local Podman compose overrides
+compose.override.yaml

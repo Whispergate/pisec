@@ -1,0 +1,70 @@
+name: pisec
+
+x-podman:
+  in_pod: false
+
+networks:
+  default:
+  # Agent-only: no DNS, and the only route out is the gateway.
+  sandbox:
+    internal: true
+    x-podman.disable_dns: true
+    x-podman.routes: ["0.0.0.0/0,10.254.254.2"]
+    ipam:
+      config:
+        - subnet: 10.254.254.0/24
+          ip_range: 10.254.254.128/25
+
+services:
+  gw:
+    build: gateway
+    image: pisec-gw
+    container_name: pisec-gw
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: 1
+    environment:
+      - SUBNET=10.254.254.0/24
+      - GW_IP=10.254.254.2
+    volumes:
+      - ./pisec.conf:/etc/pisec/pisec.conf:ro,Z
+      # Audit logs live outside the agent's reach.
+      - ./logs:/var/log/pisec:Z
+    networks:
+      default:
+      sandbox:
+        ipv4_address: 10.254.254.3
+        x-podman.interface_name: sandbox
+
+  agent:
+    build: agent
+    image: pisec
+    depends_on: [gw]
+    runtime: runsc
+    tty: true
+    stdin_open: true
+    security_opt: [label=disable, no-new-privileges]
+    cap_drop: [NET_ADMIN, NET_RAW]
+    env_file: agent/config/providers.env
+    environment:
+      - COLORTERM
+      - http_proxy=http://10.254.254.2:3128
+      - https_proxy=http://10.254.254.2:3128
+      # IP literals skip squid; the gateway firewall decides.
+      - no_proxy=localhost,127.0.0.1,0.0.0.0/1,128.0.0.0/1
+      - NODE_USE_ENV_PROXY=1
+      - NODE_OPTIONS=--disable-warning=UNDICI-EHPA
+      - PISEC_AUDIT=10.254.254.2:4000
+    volumes:
+      # Read-only so the agent can't rewrite its own prompt, guards or skills.
+      - ./agent/config/SYSTEM.md:/root/.pi/agent/SYSTEM.md:ro,Z
+      - ./agent/config/settings.json:/root/.pi/agent/settings.json:ro,Z
+      - ./agent/config/models.json:/root/.pi/agent/models.json:ro,Z
+      - ./agent/config/extensions:/root/.pi/agent/extensions:ro,Z
+      - ./agent/config/skills:/root/.pi/agent/skills:ro,Z
+      - ./agent/config/themes:/root/.pi/agent/themes:ro,Z
+      # Writable: pi refreshes /login (OAuth) tokens here.
+      - ./agent/config/auth.json:/root/.pi/agent/auth.json:Z
+      - ./agent/sessions:/root/.pi/sessions:Z
+      - ./shared:/usr/local/shared:Z
+    networks: [sandbox]

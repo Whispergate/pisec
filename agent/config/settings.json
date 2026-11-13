@@ -1,0 +1,15 @@
+{
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-5-5",
+  "delegateModel": "anthropic/claude-haiku-5-5",
+  "advisorEnabled": false,
+  "advisorModel": "anthropic/claude-opus-5-5",
+  "quietStartup": true,
+  "theme": "ayu-light/ayu-dark",
+  "lastChangelogVersion": "1.5.0",
+  "collapseChangelog": true,
+  "enableInstallTelemetry": false,
+  "defaultProjectTrust": "never",
+  "treeFilterMode": "no-tools"
+}
